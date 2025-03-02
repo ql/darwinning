@@ -17,7 +17,7 @@ module Darwinning
       @fitness_objective = options.fetch(:fitness_objective, :nullify) # :nullify, :maximize, :minimize
       @generations_limit = options.fetch(:generations_limit, 0)
       @evolution_types = options.fetch(:evolution_types, DEFAULT_EVOLUTION_TYPES)
-      @members = []
+      @members = options.fetch(:members, [])
       @generation = 0 # initial population is generation 0
       @history = []
 
@@ -26,7 +26,7 @@ module Darwinning
     end
 
     def build_population(population_size)
-      population_size.times do |i|
+      while @members.size < population_size
         @members << build_member
       end
     end
