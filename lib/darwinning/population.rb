@@ -111,11 +111,11 @@ module Darwinning
     def sort_members
       case @fitness_objective
       when :nullify
-        @members = @members.sort_by { |m| m.fitness ? m.fitness.abs : m.fitness }
+        @members.sort_by! { |m| m.fitness ? m.fitness.abs : m.fitness }
       when :maximize
-        @members = @members.sort_by { |m| m.fitness }.reverse
+        @members.sort_by! { |m| -m.fitness }
       else
-        @members = @members.sort_by { |m| m.fitness }
+        @members.sort_by! { |m| m.fitness }
       end
     end
 
