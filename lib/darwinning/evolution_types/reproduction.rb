@@ -65,8 +65,7 @@ module Darwinning
         genotypes2 = {}
 
         m1.genes.each do |gene|
-          g1_parent = [m1,m2].sample
-          g2_parent = [m1,m2].sample
+          g1_parent, g2_parent = [m1,m2].shuffle
 
           genotypes1[gene] = g1_parent.genotypes[gene]
           genotypes2[gene] = g2_parent.genotypes[gene]
