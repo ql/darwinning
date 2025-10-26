@@ -2,10 +2,11 @@ module Darwinning
   module EvolutionTypes
 
     class Mutation
-      attr_reader :mutation_rate
+      attr_reader :mutation_rate, :mutation_factor
 
       def initialize(options = {})
         @mutation_rate = options.fetch(:mutation_rate, 0.0)
+        @mutation_factor = options.fetch(:mutation_factor, 0.5)
       end
 
       def evolve(members)
@@ -30,7 +31,7 @@ module Darwinning
 
       # Selects a random genotype from the organism and re-expresses its gene
       def re_express_random_genotypes(member)
-        max_mutations_count = rand(member.genotypes.length / 3)
+        max_mutations_count = rand((member.genotypes.length * mutation_factor).to_i)
 
         max_mutations_count.times do
           random_index = rand(member.genotypes.length)
@@ -45,6 +46,8 @@ module Darwinning
             member.send("#{gene.name}=", gene.express)
           end
         end
+
+        member.set_coupled_genes
 
         member
       end

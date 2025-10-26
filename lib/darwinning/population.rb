@@ -4,6 +4,7 @@ module Darwinning
     attr_reader :members, :generations_limit, :fitness_goal, :fitness_objective,
                 :organism, :population_size, :generation,
                 :evolution_types, :history
+    attr_writer :members
 
     DEFAULT_EVOLUTION_TYPES = [
       Darwinning::EvolutionTypes::Reproduction.new(crossover_method: :alternating_swap),
@@ -12,6 +13,7 @@ module Darwinning
 
     def initialize(options = {})
       @organism = options.fetch(:organism)
+      @organism_traits = options.fetch(:organism_traits, {})
       @population_size = options.fetch(:population_size)
       @fitness_goal = options.fetch(:fitness_goal)
       @fitness_objective = options.fetch(:fitness_objective, :nullify) # :nullify, :maximize, :minimize
@@ -20,9 +22,15 @@ module Darwinning
       @members = options.fetch(:members, [])
       @generation = 0 # initial population is generation 0
       @history = []
+      @known_types = Set.new
 
+      set_organism_traits
       verify_population_size_is_positive!
       build_population(@population_size)
+    end
+
+    def set_organism_traits
+      @organism.organism_traits = @organism_traits
     end
 
     def build_population(population_size)
@@ -35,6 +43,11 @@ module Darwinning
       until evolution_over?
         make_next_generation!
       end
+      sort_members
+    end
+
+    def reset_generation!
+      @generation = 0
     end
 
     def set_members_fitness!(fitness_values)
@@ -46,32 +59,33 @@ module Darwinning
     def make_next_generation!
       sort_members
       @history << @members
+      #@members.each { |m| @known_types << m.gene_values }
 
       new_members = []
-
-      until new_members.length >= members.length
+      until new_members.length >= @population_size
         m1 = weighted_select
         m2 = weighted_select
 
         new_members += apply_pairwise_evolutions(m1, m2)
+        new_members = apply_non_pairwise_evolutions(new_members)
+
+        # do not use same genes over and over
+        #new_members.reject! do |m|
+          #(rand > 0.5) && @known_types.include?(m.gene_values)
+        #end
       end
 
-      # In the case of an odd population size, we likely added one too many members.
-      new_members.pop if new_members.length > members.length
+      @members = new_members[0...@population_size]
 
-      @members = apply_non_pairwise_evolutions(new_members)
-      sort_members
-      @history << @members
       @generation += 1
+      puts
     end
 
     def evolution_over?
       # check if the fitness goal or generation limit has been met
-      if generations_limit > 0
-        generation == generations_limit || goal_attained?
-      else
-        goal_attained?
-      end
+      return true if generations_limit.positive? && generation >= generations_limit
+
+      goal_attained? || converged?
     end
 
     def best_member
@@ -79,7 +93,15 @@ module Darwinning
     end
 
     def best_each_generation
-      @history.map(&:first)
+      (@history + [@members]).map(&:first)
+    end
+
+    def drop_worst_members(count)
+      @members = @members[...-count]
+    end
+
+    def inject_members(*members)
+      @members.append(*members)
     end
 
     def size
@@ -98,6 +120,8 @@ module Darwinning
     private
 
     def goal_attained?
+      return false if fitness_goal == Float::INFINITY || fitness_goal == -Float::INFINITY
+
       case @fitness_objective
       when :nullify
         best_member.fitness.abs <= fitness_goal
@@ -106,6 +130,10 @@ module Darwinning
       else
         best_member.fitness <= fitness_goal
       end
+    end
+
+    def converged?
+      (@generation > 10) && best_each_generation.last(10).map(&:fitness).uniq.size == 1 # TODO: better criteria
     end
 
     def sort_members
@@ -177,8 +205,14 @@ module Darwinning
       }
 
       normalized_cumulative_sums.last[0] = 1.0
-      cut = rand
-      return normalized_cumulative_sums.find { |e| cut < e[0] }[1]
+ 
+      boundary = rand(normalized_cumulative_sums.size - 1)
+
+      return normalized_cumulative_sums[0].last if boundary.zero?
+
+      cut = rand * normalized_cumulative_sums[boundary].first
+
+      normalized_cumulative_sums[0..boundary].find { |pair| pair[0] > cut }.last
     end
 
     def apply_pairwise_evolutions(m1, m2)

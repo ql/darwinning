@@ -22,7 +22,8 @@ module Darwinning
     end
 
     def hash
-      name.hash ^ value_range.hash ^ invalid_values.hash ^ units.hash ^ value.hash
+      #name.hash ^ value_range.hash ^ invalid_values.hash ^ units.hash ^ value.hash
+      name.hash ^ value.hash
     end
 
     def express

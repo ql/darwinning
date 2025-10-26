@@ -43,6 +43,41 @@ module Darwinning
         new_member
       end
 
+      def averaging_swap(m1, m2)
+        genotypes1 = {}
+        genotypes2 = {}
+
+        n1, n2 = [m1, m2].shuffle
+
+        n1.genes.each_with_index do |gene, i|
+          genotypes1[gene] = 
+            case n1.genotypes[gene]
+            when Integer
+              avg = (n1.genotypes[gene] + n2.genotypes[gene]) / 2 rescue n2.genotypes[gene]
+              gene.value_range.min_by { |value| (value - avg).abs }
+            when Float
+              avg = ((n1.genotypes[gene] + n2.genotypes[gene]) / 2.0).round(1) rescue n2.genotypes[gene]
+              gene.value_range.min_by { |value| (value - avg).abs }
+            else
+              (i % 2).zero? ? n1.genotypes[gene] : n2.genotypes[gene]
+            end
+
+          genotypes2[gene] = 
+            case n1.genotypes[gene]
+            when Integer
+              avg = (n1.genotypes[gene] + n2.genotypes[gene]) / 2 rescue n1.genotypes[gene]
+              gene.value_range.min_by { |value| (value - avg).abs }
+            when Float
+              avg = ((n1.genotypes[gene] + n2.genotypes[gene]) / 2.0).round(1)  rescue n1.genotypes[gene]
+              gene.value_range.min_by { |value| (value - avg).abs }
+            else
+              (i % 2).positive? ? n1.genotypes[gene] : n2.genotypes[gene]
+            end
+        end
+  
+        [genotypes1, genotypes2]
+      end
+
       def alternating_swap(m1, m2)
         genotypes1 = {}
         genotypes2 = {}
